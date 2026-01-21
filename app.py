@@ -43,6 +43,8 @@ def initialize_session_state():
         st.session_state.translator = None
     if 'current_translation' not in st.session_state:
         st.session_state.current_translation = ''
+    if 'previous_translation' not in st.session_state:
+        st.session_state.previous_translation = ''
 
 
 def reset_current_sentence():
@@ -50,6 +52,7 @@ def reset_current_sentence():
     # 새 리스트 생성하여 상태 업데이트
     st.session_state.selected_words = []
     st.session_state.current_translation = ''
+    st.session_state.previous_translation = ''
     if st.session_state.sentences:
         st.session_state.current_words = text_processor.get_current_sentence_words(
             st.session_state.sentences,
@@ -91,6 +94,45 @@ def process_text_input(text: str):
     st.rerun()
 
 
+def highlight_different_words(current: str, previous: str) -> str:
+    """
+    현재 번역 결과와 이전 번역 결과를 비교하여 달라진 단어를 빨간색으로 표시합니다.
+    
+    Args:
+        current: 현재 번역 결과
+        previous: 이전 번역 결과
+        
+    Returns:
+        HTML 형식의 텍스트 (달라진 단어는 빨간색)
+    """
+    if not previous:
+        # 이전 번역이 없으면 모든 단어를 빨간색으로 표시하지 않고 일반 텍스트로
+        return current
+    
+    # 단어 단위로 분할
+    current_words = text_processor.split_into_words(current)
+    previous_words = text_processor.split_into_words(previous)
+    
+    # 단어 단위로 비교 (인덱스 기반 비교)
+    result_parts = []
+    
+    for i, current_word in enumerate(current_words):
+        # 같은 위치의 이전 단어와 비교
+        previous_word = previous_words[i] if i < len(previous_words) else None
+        
+        # HTML 이스케이프 처리
+        escaped_word = current_word.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        
+        # 단어가 다르거나 이전 번역에 없는 단어면 빨간색으로 표시
+        if previous_word is None or current_word != previous_word:
+            result_parts.append(f'<span style="color: red; font-weight: bold;">{escaped_word}</span>')
+        else:
+            # 같으면 일반 텍스트
+            result_parts.append(escaped_word)
+    
+    return ' '.join(result_parts)
+
+
 def handle_word_click(word_idx: int):
     """어절 버튼 클릭 처리 (토글)"""
     if word_idx < 0 or word_idx >= len(st.session_state.current_words):
@@ -119,6 +161,9 @@ def handle_word_click(word_idx: int):
     # 번역 수행
     if st.session_state.translator and accumulated_text:
         try:
+            # 이전 번역 결과 저장
+            st.session_state.previous_translation = st.session_state.current_translation
+            
             translated = st.session_state.translator.translate(
                 accumulated_text,
                 st.session_state.source_lang,
@@ -342,57 +387,17 @@ def main():
                 st.subheader("🌍 번역")
                 
                 # 번역 결과 표시
-                # 선택된 단어가 있으면 실시간으로 번역 표시
-                if st.session_state.selected_words:
-                    # 선택된 단어들을 순서대로 정렬
-                    sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
-                    accumulated_text = ' '.join([w[1] for w in sorted_words])
-                    
-                    # 번역 수행 (번역기가 있고 텍스트가 있을 때만)
-                    if st.session_state.translator and accumulated_text:
-                        try:
-                            translated = st.session_state.translator.translate(
-                                accumulated_text,
-                                st.session_state.source_lang,
-                                st.session_state.target_lang
-                            )
-                            st.session_state.current_translation = translated
-                            st.text_area(
-                                "번역 결과",
-                                value=translated,
-                                height=100,
-                                disabled=True,
-                                key=f"translation_display_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
-                            )
-                        except translation.TranslationError as e:
-                            st.error(str(e))
-                            if st.session_state.current_translation:
-                                st.text_area(
-                                    "번역 결과",
-                                    value=st.session_state.current_translation,
-                                    height=100,
-                                    disabled=True,
-                                    key=f"translation_display_error_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
-                                )
-                    elif st.session_state.current_translation:
-                        # 번역기가 없어도 이전 번역 결과 표시
-                        st.text_area(
-                            "번역 결과",
-                            value=st.session_state.current_translation,
-                            height=100,
-                            disabled=True,
-                            key=f"translation_display_prev_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
-                        )
-                    else:
-                        st.info("어절을 클릭하면 번역이 표시됩니다.")
-                elif st.session_state.current_translation:
-                    st.text_area(
-                        "번역 결과",
-                        value=st.session_state.current_translation,
-                        height=100,
-                        disabled=True,
-                        key=f"translation_display_final_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
+                # handle_word_click에서 이미 번역을 수행했으므로 여기서는 표시만
+                if st.session_state.current_translation:
+                    # 달라진 단어를 빨간색으로 표시
+                    highlighted = highlight_different_words(
+                        st.session_state.current_translation,
+                        st.session_state.previous_translation
                     )
+                    st.markdown("**번역 결과:**")
+                    st.markdown(f'<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; min-height: 100px; background-color: #f9f9f9;">{highlighted}</div>', unsafe_allow_html=True)
+                elif st.session_state.selected_words:
+                    st.info("어절을 클릭하면 번역이 표시됩니다.")
                 else:
                     st.info("어절을 클릭하면 번역이 표시됩니다.")
                 
@@ -403,6 +408,9 @@ def main():
                     accumulated_text = ' '.join([w[1] for w in sorted_words])
                     if st.button("🔄 번역 새로고침", use_container_width=True):
                         try:
+                            # 이전 번역 결과 저장
+                            st.session_state.previous_translation = st.session_state.current_translation
+                            
                             translated = st.session_state.translator.translate(
                                 accumulated_text,
                                 st.session_state.source_lang,
