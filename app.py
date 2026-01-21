@@ -47,6 +47,7 @@ def initialize_session_state():
 
 def reset_current_sentence():
     """현재 문장 상태 초기화"""
+    # 새 리스트 생성하여 상태 업데이트
     st.session_state.selected_words = []
     st.session_state.current_translation = ''
     if st.session_state.sentences:
@@ -87,6 +88,7 @@ def process_text_input(text: str):
     reset_current_sentence()
     
     st.success(f"{len(sentences)}개의 문장을 찾았습니다.")
+    st.rerun()
 
 
 def handle_word_click(word_idx: int):
@@ -97,14 +99,19 @@ def handle_word_click(word_idx: int):
     word = st.session_state.current_words[word_idx]
     
     # 이미 선택된 단어인지 확인
-    if word_idx in [w[0] for w in st.session_state.selected_words]:
+    selected_indices = [w[0] for w in st.session_state.selected_words]
+    if word_idx in selected_indices:
         return
     
     # 선택된 단어에 추가
-    st.session_state.selected_words.append((word_idx, word))
+    # Streamlit의 상태 업데이트를 위해 새 리스트 생성
+    current_selected = list(st.session_state.selected_words)
+    current_selected.append((word_idx, word))
+    st.session_state.selected_words = current_selected
     
-    # 누적 텍스트 생성
-    accumulated_text = ' '.join([w[1] for w in st.session_state.selected_words])
+    # 누적 텍스트 생성 (순서대로 정렬)
+    sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+    accumulated_text = ' '.join([w[1] for w in sorted_words])
     
     # 번역 수행
     if st.session_state.translator and accumulated_text:
@@ -280,13 +287,15 @@ def main():
             
             # 선택된 어절들 표시
             if st.session_state.selected_words:
-                selected_text = ' '.join([w[1] for w in st.session_state.selected_words])
+                # 선택된 단어들을 순서대로 정렬
+                sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+                selected_text = ' '.join([w[1] for w in sorted_words])
                 st.text_area(
                     "선택된 텍스트",
                     value=selected_text,
                     height=100,
                     disabled=True,
-                    key="selected_text_display"
+                    key=f"selected_text_display_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
                 )
             
             # 어절 버튼들
@@ -311,11 +320,13 @@ def main():
                         button_idx = row_start + col_idx
                         if button_idx < len(word_buttons):
                             word_idx, word = word_buttons[button_idx]
-                            if col.button(
+                            button_key = f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}"
+                            button_clicked = col.button(
                                 word,
-                                key=f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}",
+                                key=button_key,
                                 use_container_width=True
-                            ):
+                            )
+                            if button_clicked:
                                 handle_word_click(word_idx)
                                 st.rerun()
             else:
@@ -325,20 +336,65 @@ def main():
             st.subheader("🌍 번역")
             
             # 번역 결과 표시
-            if st.session_state.current_translation:
+            # 선택된 단어가 있으면 실시간으로 번역 표시
+            if st.session_state.selected_words:
+                # 선택된 단어들을 순서대로 정렬
+                sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+                accumulated_text = ' '.join([w[1] for w in sorted_words])
+                
+                # 번역 수행 (번역기가 있고 텍스트가 있을 때만)
+                if st.session_state.translator and accumulated_text:
+                    try:
+                        translated = st.session_state.translator.translate(
+                            accumulated_text,
+                            st.session_state.source_lang,
+                            st.session_state.target_lang
+                        )
+                        st.session_state.current_translation = translated
+                        st.text_area(
+                            "번역 결과",
+                            value=translated,
+                            height=100,
+                            disabled=True,
+                            key=f"translation_display_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
+                        )
+                    except translation.TranslationError as e:
+                        st.error(str(e))
+                        if st.session_state.current_translation:
+                            st.text_area(
+                                "번역 결과",
+                                value=st.session_state.current_translation,
+                                height=100,
+                                disabled=True,
+                                key=f"translation_display_error_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
+                            )
+                elif st.session_state.current_translation:
+                    # 번역기가 없어도 이전 번역 결과 표시
+                    st.text_area(
+                        "번역 결과",
+                        value=st.session_state.current_translation,
+                        height=100,
+                        disabled=True,
+                        key=f"translation_display_prev_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
+                    )
+                else:
+                    st.info("어절을 클릭하면 번역이 표시됩니다.")
+            elif st.session_state.current_translation:
                 st.text_area(
                     "번역 결과",
                     value=st.session_state.current_translation,
                     height=100,
                     disabled=True,
-                    key="translation_display"
+                    key=f"translation_display_final_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
                 )
             else:
                 st.info("어절을 클릭하면 번역이 표시됩니다.")
             
             # 번역 버튼 (수동 번역)
             if st.session_state.selected_words and st.session_state.translator:
-                accumulated_text = ' '.join([w[1] for w in st.session_state.selected_words])
+                # 선택된 단어들을 순서대로 정렬
+                sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+                accumulated_text = ' '.join([w[1] for w in sorted_words])
                 if st.button("🔄 번역 새로고침", use_container_width=True):
                     try:
                         translated = st.session_state.translator.translate(
