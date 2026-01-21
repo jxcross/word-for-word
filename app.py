@@ -96,14 +96,14 @@ def process_text_input(text: str):
 
 def highlight_different_words(current: str, previous: str) -> str:
     """
-    현재 번역 결과와 이전 번역 결과를 비교하여 달라진 단어를 빨간색으로 표시합니다.
+    현재 번역 결과와 이전 번역 결과를 비교하여 새로 추가된 단어만 빨간색으로 표시합니다.
     
     Args:
         current: 현재 번역 결과
         previous: 이전 번역 결과
         
     Returns:
-        HTML 형식의 텍스트 (달라진 단어는 빨간색)
+        HTML 형식의 텍스트 (새로 추가된 단어는 빨간색)
     """
     if not previous:
         # 이전 번역이 없으면 모든 단어를 빨간색으로 표시하지 않고 일반 텍스트로
@@ -113,21 +113,21 @@ def highlight_different_words(current: str, previous: str) -> str:
     current_words = text_processor.split_into_words(current)
     previous_words = text_processor.split_into_words(previous)
     
-    # 단어 단위로 비교 (인덱스 기반 비교)
+    # 이전 단어들을 집합으로 만들어 빠른 조회
+    previous_words_set = set(previous_words)
+    
+    # 현재 단어들을 순회하면서 이전에 없던 단어만 빨간색으로 표시
     result_parts = []
     
-    for i, current_word in enumerate(current_words):
-        # 같은 위치의 이전 단어와 비교
-        previous_word = previous_words[i] if i < len(previous_words) else None
-        
+    for current_word in current_words:
         # HTML 이스케이프 처리
         escaped_word = current_word.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         
-        # 단어가 다르거나 이전 번역에 없는 단어면 빨간색으로 표시
-        if previous_word is None or current_word != previous_word:
+        # 이전 번역에 없는 단어면 빨간색으로 표시
+        if current_word not in previous_words_set:
             result_parts.append(f'<span style="color: red; font-weight: bold;">{escaped_word}</span>')
         else:
-            # 같으면 일반 텍스트
+            # 이전에 있던 단어는 일반 텍스트로 표시
             result_parts.append(escaped_word)
     
     return ' '.join(result_parts)
