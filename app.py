@@ -1,0 +1,394 @@
+"""
+Streamlit 기반 Word-for-Word 번역 앱
+- 왼쪽 창: 어절 버튼 클릭으로 텍스트 구성
+- 오른쪽 창: 실시간 번역 결과 표시
+"""
+
+import streamlit as st
+from typing import List, Tuple, Optional
+import text_processor
+import translation
+import storage
+
+
+# 페이지 설정
+st.set_page_config(
+    page_title="Word-for-Word Translation",
+    page_icon="🌐",
+    layout="wide"
+)
+
+
+def initialize_session_state():
+    """세션 상태 초기화"""
+    if 'source_lang' not in st.session_state:
+        st.session_state.source_lang = 'ko'
+    if 'target_lang' not in st.session_state:
+        st.session_state.target_lang = 'en'
+    if 'full_text' not in st.session_state:
+        st.session_state.full_text = ''
+    if 'sentences' not in st.session_state:
+        st.session_state.sentences = []
+    if 'current_sentence_idx' not in st.session_state:
+        st.session_state.current_sentence_idx = 0
+    if 'current_words' not in st.session_state:
+        st.session_state.current_words = []
+    if 'selected_words' not in st.session_state:
+        st.session_state.selected_words = []
+    if 'translation_history' not in st.session_state:
+        st.session_state.translation_history = []
+    if 'deepl_api_key' not in st.session_state:
+        st.session_state.deepl_api_key = ''
+    if 'translator' not in st.session_state:
+        st.session_state.translator = None
+    if 'current_translation' not in st.session_state:
+        st.session_state.current_translation = ''
+
+
+def reset_current_sentence():
+    """현재 문장 상태 초기화"""
+    st.session_state.selected_words = []
+    st.session_state.current_translation = ''
+    if st.session_state.sentences:
+        st.session_state.current_words = text_processor.get_current_sentence_words(
+            st.session_state.sentences,
+            st.session_state.current_sentence_idx
+        )
+
+
+def process_text_input(text: str):
+    """텍스트 입력 처리"""
+    if not text or not text.strip():
+        st.warning("텍스트를 입력하세요.")
+        return
+    
+    # 문장 분할
+    sentences, detected_lang = text_processor.process_text(
+        text, 
+        st.session_state.source_lang
+    )
+    
+    if not sentences:
+        st.warning("문장을 찾을 수 없습니다.")
+        return
+    
+    # 상태 업데이트
+    st.session_state.full_text = text
+    st.session_state.sentences = sentences
+    st.session_state.current_sentence_idx = 0
+    st.session_state.translation_history = []
+    
+    # 언어 자동 감지 결과 반영
+    if detected_lang:
+        st.session_state.source_lang = detected_lang
+        st.session_state.target_lang = 'en' if detected_lang == 'ko' else 'ko'
+    
+    # 현재 문장 초기화
+    reset_current_sentence()
+    
+    st.success(f"{len(sentences)}개의 문장을 찾았습니다.")
+
+
+def handle_word_click(word_idx: int):
+    """어절 버튼 클릭 처리"""
+    if word_idx < 0 or word_idx >= len(st.session_state.current_words):
+        return
+    
+    word = st.session_state.current_words[word_idx]
+    
+    # 이미 선택된 단어인지 확인
+    if word_idx in [w[0] for w in st.session_state.selected_words]:
+        return
+    
+    # 선택된 단어에 추가
+    st.session_state.selected_words.append((word_idx, word))
+    
+    # 누적 텍스트 생성
+    accumulated_text = ' '.join([w[1] for w in st.session_state.selected_words])
+    
+    # 번역 수행
+    if st.session_state.translator and accumulated_text:
+        try:
+            translated = st.session_state.translator.translate(
+                accumulated_text,
+                st.session_state.source_lang,
+                st.session_state.target_lang
+            )
+            st.session_state.current_translation = translated
+        except translation.TranslationError as e:
+            st.error(str(e))
+            st.session_state.current_translation = ''
+
+
+def save_current_sentence():
+    """현재 문장 번역 저장"""
+    if not st.session_state.sentences:
+        return
+    
+    current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
+    translation_text = st.session_state.current_translation
+    
+    if current_sentence and translation_text:
+        # 번역 히스토리에 추가
+        st.session_state.translation_history.append((current_sentence, translation_text))
+        st.success("번역이 저장되었습니다.")
+
+
+def move_to_next_sentence():
+    """다음 문장으로 이동"""
+    if not st.session_state.sentences:
+        return
+    
+    # 현재 문장 저장
+    if st.session_state.selected_words:
+        save_current_sentence()
+    
+    # 다음 문장으로 이동
+    if st.session_state.current_sentence_idx < len(st.session_state.sentences) - 1:
+        st.session_state.current_sentence_idx += 1
+        reset_current_sentence()
+    else:
+        st.info("마지막 문장입니다.")
+
+
+def move_to_previous_sentence():
+    """이전 문장으로 이동"""
+    if st.session_state.current_sentence_idx > 0:
+        # 현재 문장 저장
+        if st.session_state.selected_words:
+            save_current_sentence()
+        
+        st.session_state.current_sentence_idx -= 1
+        reset_current_sentence()
+    else:
+        st.info("첫 번째 문장입니다.")
+
+
+def initialize_translator(api_key: str):
+    """번역기 초기화"""
+    try:
+        st.session_state.translator = translation.DeepLTranslator(api_key)
+        st.session_state.deepl_api_key = api_key
+        return True
+    except translation.TranslationError as e:
+        st.error(str(e))
+        return False
+
+
+def main():
+    """메인 앱"""
+    initialize_session_state()
+    
+    # 제목
+    st.title("🌐 Word-for-Word Translation")
+    st.markdown("---")
+    
+    # 사이드바: 설정
+    with st.sidebar:
+        st.header("⚙️ 설정")
+        
+        # 언어 선택
+        translation_direction = st.selectbox(
+            "번역 방향",
+            ["한국어 → 영어", "영어 → 한국어"],
+            index=0 if st.session_state.source_lang == 'ko' else 1
+        )
+        
+        if translation_direction == "한국어 → 영어":
+            st.session_state.source_lang = 'ko'
+            st.session_state.target_lang = 'en'
+        else:
+            st.session_state.source_lang = 'en'
+            st.session_state.target_lang = 'ko'
+        
+        # DeepL API 키 입력
+        st.subheader("DeepL API 키")
+        api_key_input = st.text_input(
+            "API 키",
+            value=st.session_state.deepl_api_key,
+            type="password",
+            help="DeepL API 키를 입력하세요. .env 파일에서도 로드됩니다."
+        )
+        
+        if api_key_input and api_key_input != st.session_state.deepl_api_key:
+            if initialize_translator(api_key_input):
+                st.success("API 키가 설정되었습니다.")
+        
+        if st.session_state.translator:
+            st.success("✅ 번역기 준비됨")
+        else:
+            st.warning("⚠️ API 키를 설정하세요")
+        
+        st.markdown("---")
+        
+        # 진행 상황
+        if st.session_state.sentences:
+            st.subheader("📊 진행 상황")
+            total = len(st.session_state.sentences)
+            current = st.session_state.current_sentence_idx + 1
+            st.progress(current / total if total > 0 else 0)
+            st.caption(f"{current} / {total} 문장")
+            st.caption(f"완료: {len(st.session_state.translation_history)} 문장")
+    
+    # 메인 영역
+    # 텍스트 입력
+    st.header("📝 텍스트 입력")
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        # 파일 업로드
+        uploaded_file = st.file_uploader(
+            "텍스트 파일 업로드",
+            type=['txt'],
+            help="한국어 또는 영어 텍스트 파일을 업로드하세요."
+        )
+        
+        if uploaded_file is not None:
+            text = uploaded_file.read().decode('utf-8')
+            if text != st.session_state.full_text:
+                process_text_input(text)
+    
+    with col2:
+        # 텍스트 붙여넣기
+        text_input = st.text_area(
+            "또는 텍스트를 붙여넣으세요",
+            height=100,
+            help="텍스트를 직접 입력하거나 붙여넣으세요."
+        )
+        
+        if st.button("텍스트 처리", type="primary"):
+            if text_input:
+                process_text_input(text_input)
+            else:
+                st.warning("텍스트를 입력하세요.")
+    
+    # 번역 영역
+    if st.session_state.sentences:
+        st.markdown("---")
+        st.header("🔄 번역")
+        
+        # 현재 문장 정보
+        current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
+        st.caption(f"문장 {st.session_state.current_sentence_idx + 1} / {len(st.session_state.sentences)}")
+        
+        # 왼쪽/오른쪽 창
+        left_col, right_col = st.columns([1, 1])
+        
+        with left_col:
+            st.subheader("📖 원문")
+            
+            # 선택된 어절들 표시
+            if st.session_state.selected_words:
+                selected_text = ' '.join([w[1] for w in st.session_state.selected_words])
+                st.text_area(
+                    "선택된 텍스트",
+                    value=selected_text,
+                    height=100,
+                    disabled=True,
+                    key="selected_text_display"
+                )
+            
+            # 어절 버튼들
+            st.markdown("**어절을 클릭하세요:**")
+            
+            if st.session_state.current_words:
+                # 선택되지 않은 어절들만 버튼으로 표시
+                selected_indices = [w[0] for w in st.session_state.selected_words]
+                
+                # 버튼을 그리드로 배치
+                cols_per_row = 3
+                word_buttons = []
+                
+                for i, word in enumerate(st.session_state.current_words):
+                    if i not in selected_indices:
+                        word_buttons.append((i, word))
+                
+                # 버튼 렌더링
+                for row_start in range(0, len(word_buttons), cols_per_row):
+                    cols = st.columns(cols_per_row)
+                    for col_idx, col in enumerate(cols):
+                        button_idx = row_start + col_idx
+                        if button_idx < len(word_buttons):
+                            word_idx, word = word_buttons[button_idx]
+                            if col.button(
+                                word,
+                                key=f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}",
+                                use_container_width=True
+                            ):
+                                handle_word_click(word_idx)
+                                st.rerun()
+            else:
+                st.info("어절이 없습니다.")
+        
+        with right_col:
+            st.subheader("🌍 번역")
+            
+            # 번역 결과 표시
+            if st.session_state.current_translation:
+                st.text_area(
+                    "번역 결과",
+                    value=st.session_state.current_translation,
+                    height=100,
+                    disabled=True,
+                    key="translation_display"
+                )
+            else:
+                st.info("어절을 클릭하면 번역이 표시됩니다.")
+            
+            # 번역 버튼 (수동 번역)
+            if st.session_state.selected_words and st.session_state.translator:
+                accumulated_text = ' '.join([w[1] for w in st.session_state.selected_words])
+                if st.button("🔄 번역 새로고침", use_container_width=True):
+                    try:
+                        translated = st.session_state.translator.translate(
+                            accumulated_text,
+                            st.session_state.source_lang,
+                            st.session_state.target_lang
+                        )
+                        st.session_state.current_translation = translated
+                        st.rerun()
+                    except translation.TranslationError as e:
+                        st.error(str(e))
+        
+        # 네비게이션 버튼
+        st.markdown("---")
+        nav_col1, nav_col2, nav_col3, nav_col4 = st.columns([1, 1, 1, 2])
+        
+        with nav_col1:
+            if st.button("◀ 이전 문장", use_container_width=True):
+                move_to_previous_sentence()
+                st.rerun()
+        
+        with nav_col2:
+            if st.button("다음 문장 ▶", use_container_width=True, type="primary"):
+                move_to_next_sentence()
+                st.rerun()
+        
+        with nav_col3:
+            if st.button("💾 현재 문장 저장", use_container_width=True):
+                save_current_sentence()
+                st.rerun()
+        
+        with nav_col4:
+            # 전체 저장
+            if st.session_state.translation_history:
+                if st.button("💾 전체 번역 저장", use_container_width=True, type="secondary"):
+                    try:
+                        filepath = storage.save_translation(st.session_state.translation_history)
+                        st.success(f"번역이 저장되었습니다: {filepath}")
+                    except Exception as e:
+                        st.error(f"저장 중 오류: {str(e)}")
+        
+        # 리셋 버튼
+        if st.button("🔄 현재 문장 리셋", use_container_width=True):
+            reset_current_sentence()
+            st.rerun()
+    
+    else:
+        # 안내 메시지
+        st.info("👆 위에서 텍스트 파일을 업로드하거나 텍스트를 입력하세요.")
+
+
+if __name__ == "__main__":
+    main()
