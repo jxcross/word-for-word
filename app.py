@@ -92,21 +92,24 @@ def process_text_input(text: str):
 
 
 def handle_word_click(word_idx: int):
-    """어절 버튼 클릭 처리"""
+    """어절 버튼 클릭 처리 (토글)"""
     if word_idx < 0 or word_idx >= len(st.session_state.current_words):
         return
     
     word = st.session_state.current_words[word_idx]
     
-    # 이미 선택된 단어인지 확인
+    # 선택된 단어 인덱스 리스트
     selected_indices = [w[0] for w in st.session_state.selected_words]
-    if word_idx in selected_indices:
-        return
     
-    # 선택된 단어에 추가
-    # Streamlit의 상태 업데이트를 위해 새 리스트 생성
+    # 토글: 이미 선택된 단어면 제거, 아니면 추가
     current_selected = list(st.session_state.selected_words)
-    current_selected.append((word_idx, word))
+    if word_idx in selected_indices:
+        # 선택 해제
+        current_selected = [w for w in current_selected if w[0] != word_idx]
+    else:
+        # 선택 추가
+        current_selected.append((word_idx, word))
+    
     st.session_state.selected_words = current_selected
     
     # 누적 텍스트 생성 (순서대로 정렬)
@@ -301,33 +304,33 @@ def main():
                         key=f"selected_text_display_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
                     )
                 
-                # 어절 버튼들
-                st.markdown("**어절을 클릭하세요:**")
+                # 어절 버튼들 (토글)
+                st.markdown("**어절을 클릭하여 선택/해제하세요:**")
                 
                 if st.session_state.current_words:
-                    # 선택되지 않은 어절들만 버튼으로 표시
+                    # 선택된 단어 인덱스 리스트
                     selected_indices = [w[0] for w in st.session_state.selected_words]
                     
                     # 버튼을 그리드로 배치
                     cols_per_row = 3
-                    word_buttons = []
                     
-                    for i, word in enumerate(st.session_state.current_words):
-                        if i not in selected_indices:
-                            word_buttons.append((i, word))
-                    
+                    # 모든 어절을 버튼으로 표시 (선택된 것은 강조)
                     # 버튼 렌더링
-                    for row_start in range(0, len(word_buttons), cols_per_row):
+                    for row_start in range(0, len(st.session_state.current_words), cols_per_row):
                         cols = st.columns(cols_per_row)
                         for col_idx, col in enumerate(cols):
-                            button_idx = row_start + col_idx
-                            if button_idx < len(word_buttons):
-                                word_idx, word = word_buttons[button_idx]
+                            word_idx = row_start + col_idx
+                            if word_idx < len(st.session_state.current_words):
+                                word = st.session_state.current_words[word_idx]
                                 button_key = f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}"
+                                
+                                # 선택된 단어는 primary 타입으로 표시
+                                is_selected = word_idx in selected_indices
                                 button_clicked = col.button(
                                     word,
                                     key=button_key,
-                                    use_container_width=True
+                                    use_container_width=True,
+                                    type="primary" if is_selected else "secondary"
                                 )
                                 if button_clicked:
                                     handle_word_click(word_idx)
