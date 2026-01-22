@@ -51,19 +51,50 @@ def initialize_session_state():
         st.session_state.current_translation = ''
     if 'previous_translation' not in st.session_state:
         st.session_state.previous_translation = ''
+    if 'sentence_states' not in st.session_state:
+        st.session_state.sentence_states = {}  # {sentence_idx: {'selected_words': [...], 'current_translation': '...', 'previous_translation': '...'}}
+
+
+def save_current_sentence_state():
+    """현재 문장의 상태를 저장"""
+    if not st.session_state.sentences:
+        return
+    
+    sentence_idx = st.session_state.current_sentence_idx
+    st.session_state.sentence_states[sentence_idx] = {
+        'selected_words': list(st.session_state.selected_words),
+        'current_translation': st.session_state.current_translation,
+        'previous_translation': st.session_state.previous_translation
+    }
+
+
+def restore_sentence_state(sentence_idx: int):
+    """특정 문장의 상태를 복원"""
+    if not st.session_state.sentences:
+        return
+    
+    # 현재 문장의 어절 가져오기
+    st.session_state.current_words = text_processor.get_current_sentence_words(
+        st.session_state.sentences,
+        sentence_idx
+    )
+    
+    # 저장된 상태가 있으면 복원
+    if sentence_idx in st.session_state.sentence_states:
+        state = st.session_state.sentence_states[sentence_idx]
+        st.session_state.selected_words = list(state.get('selected_words', []))
+        st.session_state.current_translation = state.get('current_translation', '')
+        st.session_state.previous_translation = state.get('previous_translation', '')
+    else:
+        # 저장된 상태가 없으면 초기화
+        st.session_state.selected_words = []
+        st.session_state.current_translation = ''
+        st.session_state.previous_translation = ''
 
 
 def reset_current_sentence():
-    """현재 문장 상태 초기화"""
-    # 새 리스트 생성하여 상태 업데이트
-    st.session_state.selected_words = []
-    st.session_state.current_translation = ''
-    st.session_state.previous_translation = ''
-    if st.session_state.sentences:
-        st.session_state.current_words = text_processor.get_current_sentence_words(
-            st.session_state.sentences,
-            st.session_state.current_sentence_idx
-        )
+    """현재 문장 상태 초기화 (저장된 상태가 있으면 복원, 없으면 초기화)"""
+    restore_sentence_state(st.session_state.current_sentence_idx)
 
 
 def process_text_input(text: str):
@@ -87,6 +118,7 @@ def process_text_input(text: str):
     st.session_state.sentences = sentences
     st.session_state.current_sentence_idx = 0
     st.session_state.translation_history = {}
+    st.session_state.sentence_states = {}  # 문장 상태 초기화
     
     # 언어 자동 감지 결과 반영
     if detected_lang:
@@ -205,6 +237,9 @@ def move_to_next_sentence():
     if not st.session_state.sentences:
         return
     
+    # 현재 문장의 상태 저장 (선택된 단어, 번역 결과 등)
+    save_current_sentence_state()
+    
     # 현재 문장 저장 (번역 결과가 있으면 저장)
     if st.session_state.current_translation:
         save_current_sentence()
@@ -212,7 +247,7 @@ def move_to_next_sentence():
     # 다음 문장으로 이동
     if st.session_state.current_sentence_idx < len(st.session_state.sentences) - 1:
         st.session_state.current_sentence_idx += 1
-        reset_current_sentence()
+        restore_sentence_state(st.session_state.current_sentence_idx)
     else:
         st.info("마지막 문장입니다.")
 
@@ -220,12 +255,15 @@ def move_to_next_sentence():
 def move_to_previous_sentence():
     """이전 문장으로 이동"""
     if st.session_state.current_sentence_idx > 0:
+        # 현재 문장의 상태 저장 (선택된 단어, 번역 결과 등)
+        save_current_sentence_state()
+        
         # 현재 문장 저장 (번역 결과가 있으면 저장)
         if st.session_state.current_translation:
             save_current_sentence()
         
         st.session_state.current_sentence_idx -= 1
-        reset_current_sentence()
+        restore_sentence_state(st.session_state.current_sentence_idx)
     else:
         st.info("첫 번째 문장입니다.")
 
