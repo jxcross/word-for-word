@@ -36,7 +36,13 @@ def initialize_session_state():
     if 'selected_words' not in st.session_state:
         st.session_state.selected_words = []
     if 'translation_history' not in st.session_state:
-        st.session_state.translation_history = []
+        st.session_state.translation_history = {}  # {sentence_idx: (original, translated)}
+    elif isinstance(st.session_state.translation_history, list):
+        # 기존 리스트 형식을 딕셔너리로 변환 (호환성)
+        old_list = st.session_state.translation_history
+        st.session_state.translation_history = {}
+        for idx, (original, translated) in enumerate(old_list):
+            st.session_state.translation_history[idx] = (original, translated)
     if 'deepl_api_key' not in st.session_state:
         st.session_state.deepl_api_key = ''
     if 'translator' not in st.session_state:
@@ -80,7 +86,7 @@ def process_text_input(text: str):
     st.session_state.full_text = text
     st.session_state.sentences = sentences
     st.session_state.current_sentence_idx = 0
-    st.session_state.translation_history = []
+    st.session_state.translation_history = {}
     
     # 언어 자동 감지 결과 반영
     if detected_lang:
@@ -182,11 +188,16 @@ def save_current_sentence():
     
     current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
     translation_text = st.session_state.current_translation
+    sentence_idx = st.session_state.current_sentence_idx
     
     if current_sentence and translation_text:
-        # 번역 히스토리에 추가
-        st.session_state.translation_history.append((current_sentence, translation_text))
-        st.success("번역이 저장되었습니다.")
+        # 문장 인덱스를 키로 사용하여 저장 (중복 방지 및 업데이트)
+        if sentence_idx in st.session_state.translation_history:
+            st.session_state.translation_history[sentence_idx] = (current_sentence, translation_text)
+            st.success("번역이 업데이트되었습니다.")
+        else:
+            st.session_state.translation_history[sentence_idx] = (current_sentence, translation_text)
+            st.success("번역이 저장되었습니다.")
 
 
 def move_to_next_sentence():
@@ -194,8 +205,8 @@ def move_to_next_sentence():
     if not st.session_state.sentences:
         return
     
-    # 현재 문장 저장
-    if st.session_state.selected_words:
+    # 현재 문장 저장 (번역 결과가 있으면 저장)
+    if st.session_state.current_translation:
         save_current_sentence()
     
     # 다음 문장으로 이동
@@ -209,8 +220,8 @@ def move_to_next_sentence():
 def move_to_previous_sentence():
     """이전 문장으로 이동"""
     if st.session_state.current_sentence_idx > 0:
-        # 현재 문장 저장
-        if st.session_state.selected_words:
+        # 현재 문장 저장 (번역 결과가 있으면 저장)
+        if st.session_state.current_translation:
             save_current_sentence()
         
         st.session_state.current_sentence_idx -= 1
@@ -429,23 +440,53 @@ def main():
                 st.write(f"**번역 완료된 문장 수: {len(st.session_state.translation_history)}**")
                 st.markdown("---")
                 
-                # 번역된 내용을 표시
+                # 번역된 내용을 표시 (인덱스 순서대로 정렬)
                 translation_text = ""
-                for idx, (original, translated) in enumerate(st.session_state.translation_history, 1):
-                    translation_text += f"{idx}. {original} | {translated}\n"
+                # translation_history가 딕셔너리인지 확인
+                if isinstance(st.session_state.translation_history, dict):
+                    # 문장 인덱스 순서대로 정렬
+                    sorted_items = sorted(st.session_state.translation_history.items())
+                    
+                    # 모든 항목 표시
+                    for display_idx, (sentence_idx, value) in enumerate(sorted_items, 1):
+                        # value가 튜플인지 확인
+                        if isinstance(value, tuple) and len(value) == 2:
+                            original, translated = value
+                            translation_text += f"{display_idx}. {original} | {translated}\n"
+                        else:
+                            # 예상치 못한 형식
+                            translation_text += f"{display_idx}. [오류: 잘못된 데이터 형식] (인덱스: {sentence_idx}, 값: {value})\n"
+                    
+                    # 디버깅: 생성된 텍스트 확인 (주석 처리)
+                    # st.write(f"🔍 생성된 번역 텍스트 길이: {len(translation_text)}, 줄 수: {len(translation_text.split(chr(10)))}")
+                    # st.write(f"🔍 생성된 번역 텍스트 내용 (repr): {repr(translation_text)}")
+                    # st.write(f"🔍 생성된 번역 텍스트 내용 (실제): {translation_text}")
+                else:
+                    # 리스트 형식인 경우 (호환성)
+                    for idx, item in enumerate(st.session_state.translation_history, 1):
+                        if isinstance(item, tuple) and len(item) == 2:
+                            original, translated = item
+                            translation_text += f"{idx}. {original} | {translated}\n"
+                        else:
+                            translation_text += f"{idx}. [오류: 잘못된 데이터 형식]\n"
                 
-                st.text_area(
-                    "번역 완료 내용",
-                    value=translation_text,
-                    height=400,
-                    disabled=True,
-                    key="completed_translations_display"
+                # st.text_area는 여러 줄 표시에 문제가 있어 st.markdown으로 변경
+                # HTML 이스케이프 처리
+                import html
+                translation_text_escaped = html.escape(translation_text)
+                # 줄바꿈을 HTML <br>로 변환하여 표시
+                translation_text_html = translation_text_escaped.replace('\n', '<br>')
+                st.markdown(
+                    f'<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; min-height: 400px; background-color: #f9f9f9; white-space: pre-wrap; font-family: monospace;">{translation_text_html}</div>',
+                    unsafe_allow_html=True
                 )
                 
                 # 전체 번역 저장 버튼
                 if st.button("💾 전체 번역 저장", use_container_width=True, type="primary"):
                     try:
-                        filepath = storage.save_translation(st.session_state.translation_history)
+                        # 딕셔너리를 리스트로 변환 (storage 함수 호환성)
+                        translation_list = list(st.session_state.translation_history.values())
+                        filepath = storage.save_translation(translation_list)
                         st.success(f"번역이 저장되었습니다: {filepath}")
                     except Exception as e:
                         st.error(f"저장 중 오류: {str(e)}")
