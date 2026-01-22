@@ -584,13 +584,14 @@ def main():
     # 메인 컨테이너로 감싸서 화면 점프 방지
     main_container = st.container()
     
-    with main_container:
+    #with main_container:
         # 제목
-        st.markdown("<h1>🌐 Word-for-Word Translation</h1>", unsafe_allow_html=True)
+        #st.markdown("<h2>🌐 Word-for-Word Translation</h2>", unsafe_allow_html=True)
         #st.markdown("---")
     
     # 사이드바: 설정
     with st.sidebar:
+        st.markdown("<h2>🌐 Word-for-Word Translation</h2>", unsafe_allow_html=True)
         st.markdown("<h3>⚙️ 설정</h3>", unsafe_allow_html=True)
         
         # DeepL API 키 입력
@@ -616,16 +617,16 @@ def main():
         st.markdown("---")
         
         # 진행 상황
-        if st.session_state.sentences:
-            with st.container():
-                st.markdown("**📊 진행 상황**", unsafe_allow_html=True)
-                total = len(st.session_state.sentences)
-                current = st.session_state.current_sentence_idx + 1
-                progress_value = current / total if total > 0 else 0
-                st.progress(progress_value)
-                st.markdown(f"<div class='progress-container'><strong>현재:</strong> {current} / {total} 문장<br><strong>완료:</strong> {len(st.session_state.translation_history)} 문장</div>", unsafe_allow_html=True)
+        # if st.session_state.sentences:
+        #     with st.container():
+        #         st.markdown("**📊 진행 상황**", unsafe_allow_html=True)
+        #         total = len(st.session_state.sentences)
+        #         current = st.session_state.current_sentence_idx + 1
+        #         progress_value = current / total if total > 0 else 0
+        #         st.progress(progress_value)
+        #         st.markdown(f"<div class='progress-container'><strong>현재:</strong> {current} / {total} 문장<br><strong>완료:</strong> {len(st.session_state.translation_history)} 문장</div>", unsafe_allow_html=True)
         
-            st.markdown("---")
+        #     st.markdown("---")
 
         # 언어 선택
         with st.container():
@@ -680,8 +681,8 @@ def main():
     with main_container:
         # 번역 영역
         if st.session_state.sentences:
-            st.markdown("---")
-            st.markdown("<h2>🔄 번역 작업</h2>", unsafe_allow_html=True)
+            #st.markdown("---")
+            #st.markdown("<h3>🔄 번역 작업</h3>", unsafe_allow_html=True)
             
             # 현재 문장 정보 카드
             current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
@@ -689,7 +690,7 @@ def main():
             with sentence_info:
                 st.markdown(
                     f"<div class='card-container' style='text-align: center; padding: 1rem;'>"
-                    f"<strong style='font-size: 1.2rem;'>📄 문장 {st.session_state.current_sentence_idx + 1} / {len(st.session_state.sentences)}</strong>"
+                    f"<strong style='font-size: 1.0rem;'>📄 문장 {st.session_state.current_sentence_idx + 1} / {len(st.session_state.sentences)}</strong>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
@@ -704,7 +705,7 @@ def main():
                 with left_col:
                     translation_left = st.container()
                     with translation_left:
-                        st.markdown("<h3>📖 원문</h3>", unsafe_allow_html=True)
+                        st.markdown("**📖 원문**", unsafe_allow_html=True)
                         
                         # 선택된 어절들 표시
                         if st.session_state.selected_words:
@@ -713,7 +714,8 @@ def main():
                             selected_text = ' '.join([w[1] for w in sorted_words])
                             st.markdown(
                                 f'<div class="selected-text-box">'
-                                f'<strong>✅ 선택된 텍스트:</strong><br>{selected_text}'
+                                f'<strong style="font-size: 1.0rem; color: #1f77b4;">✨ 선택된 텍스트:</strong><br>'
+                                f'{selected_text}'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )
@@ -758,7 +760,7 @@ def main():
                 with right_col:
                     translation_right = st.container()
                     with translation_right:
-                        st.markdown("<h3>🌍 번역 결과</h3>", unsafe_allow_html=True)
+                        st.markdown("**🌍 번역 결과**", unsafe_allow_html=True)
                         
                         # 번역 결과 표시
                         if st.session_state.current_translation:
@@ -768,8 +770,8 @@ def main():
                                 st.session_state.previous_translation
                             )
                             st.markdown(
-                                f'<div class="translation-box">'
-                                f'<strong style="font-size: 1.1rem; color: #1f77b4;">✨ 번역 결과:</strong><br><br>'
+                                f'<div class="translation-box" style="margin-bottom: 1rem;">'
+                                f'<strong style="font-size: 1.0rem; color: #1f77b4;">✨ 번역 결과:</strong><br>'
                                 f'{highlighted}'
                                 f'</div>',
                                 unsafe_allow_html=True
@@ -804,17 +806,17 @@ def main():
             with tab2:
                 translation_history_container = st.container()
                 with translation_history_container:
-                    st.markdown("<h3>✅ 번역 완료 목록</h3>", unsafe_allow_html=True)
+                    #st.markdown("<h3>✅ 번역 완료 목록</h3>", unsafe_allow_html=True)
                     
                     # 번역된 내용 표시
                     if st.session_state.translation_history:
                         st.markdown(
                             f"<div class='card-container' style='text-align: center;'>"
-                            f"<strong style='font-size: 1.3rem;'>📊 번역 완료된 문장 수: {len(st.session_state.translation_history)}</strong>"
+                            f"<strong style='font-size: 1.0rem;'>📊 번역 완료된 문장 수: {len(st.session_state.translation_history)}</strong>"
                             f"</div>",
                             unsafe_allow_html=True
                         )
-                        st.markdown("---")
+                        #st.markdown("---")
                         
                         # 번역된 내용을 표시 (인덱스 순서대로 정렬)
                         translation_text = ""
@@ -847,7 +849,7 @@ def main():
                         # 줄바꿈을 HTML <br>로 변환하여 표시
                         translation_text_html = translation_text_escaped.replace('\n', '<br>')
                         st.markdown(
-                            f'<div class="translation-history-box">{translation_text_html}</div>',
+                            f'<div class="translation-history-box" style="margin-bottom: 1rem;">{translation_text_html}</div>',
                             unsafe_allow_html=True
                         )
                         
@@ -869,7 +871,7 @@ def main():
             nav_container = st.container()
             with nav_container:
                 st.markdown("<div class='nav-container'></div>", unsafe_allow_html=True)
-                st.markdown("---")
+                #st.markdown("---")
                 
                 # 현재 문장 인덱스와 전체 문장 수
                 current_idx = st.session_state.current_sentence_idx
