@@ -67,27 +67,58 @@ class DeepLTranslator:
             return ""
         
         try:
+            # 디버그: 입력 파라미터 출력
+            print(f"[DEBUG] translate 호출:")
+            print(f"  - text: {repr(text)}")
+            print(f"  - source_lang: {source_lang}")
+            print(f"  - target_lang: {target_lang}")
+            
             # DeepL 언어 코드 매핑
             source_code = self._map_language_code(source_lang)
             target_code = self._map_language_code(target_lang)
             
+            print(f"[DEBUG] 매핑된 언어 코드:")
+            print(f"  - source_code: {source_code}")
+            print(f"  - target_code: {target_code}")
+            
             # DeepL API 호출
+            # source_lang을 None으로 설정하여 자동 감지 사용
+            # (명시적 source_lang이 일부 경우 문제를 일으킬 수 있음)
+            # 자동 감지가 더 안정적으로 작동함
+            api_source_lang = None
+            
+            print(f"[DEBUG] API 호출 파라미터:")
+            print(f"  - text: {repr(text)}")
+            print(f"  - source_lang: {api_source_lang} (원본: {source_code})")
+            print(f"  - target_lang: {target_code}")
+            
             result = self.translator.translate_text(
                 text,
-                source_lang=source_code,
+                source_lang=api_source_lang,
                 target_lang=target_code
             )
             
+            print(f"[DEBUG] 번역 성공:")
+            print(f"  - 결과: {repr(result.text)}")
+            print(f"  - 감지된 언어: {result.detected_source_lang if hasattr(result, 'detected_source_lang') else 'N/A'}")
+            
             return result.text
             
-        except deepl.exceptions.QuotaExceededException:
+        except deepl.exceptions.QuotaExceededException as e:
+            print(f"[DEBUG] 에러: QuotaExceededException - {str(e)}")
             raise TranslationError("DeepL API 할당량이 초과되었습니다.")
-        except deepl.exceptions.AuthorizationException:
+        except deepl.exceptions.AuthorizationException as e:
+            print(f"[DEBUG] 에러: AuthorizationException - {str(e)}")
             raise TranslationError("DeepL API 인증에 실패했습니다. API 키를 확인하세요.")
-        except deepl.exceptions.ConnectionException:
+        except deepl.exceptions.ConnectionException as e:
+            print(f"[DEBUG] 에러: ConnectionException - {str(e)}")
             raise TranslationError("DeepL API 연결에 실패했습니다. 인터넷 연결을 확인하세요.")
         except Exception as e:
-            raise TranslationError(f"번역 중 오류가 발생했습니다: {str(e)}")
+            print(f"[DEBUG] 에러: Exception - {type(e).__name__}: {str(e)}")
+            print(f"[DEBUG] 에러 상세 정보:")
+            import traceback
+            traceback.print_exc()
+            raise TranslationError(f"번역 중 오류가 발생했습니다: {type(e).__name__}: {str(e)}")
     
     def _map_language_code(self, lang: str) -> str:
         """
@@ -101,7 +132,7 @@ class DeepLTranslator:
         """
         lang_map = {
             'ko': 'KO',
-            'en': 'EN-US',
+            'en': 'EN-US',  # EN은 deprecated, EN-US 또는 EN-GB 사용
             'ja': 'JA',
             'zh': 'ZH',
             'es': 'ES',
@@ -109,7 +140,10 @@ class DeepLTranslator:
             'de': 'DE',
             'it': 'IT',
             'pt': 'PT',
-            'ru': 'RU'
+            'ru': 'RU',
+            'en-us': 'EN-US',
+            'en-gb': 'EN-GB',
+            'en-uk': 'EN-GB',  # EN-UK는 EN-GB의 별칭
         }
         
         return lang_map.get(lang.lower(), 'EN-US')
@@ -123,7 +157,7 @@ class DeepLTranslator:
         """
         try:
             # 간단한 테스트 번역으로 API 키 검증
-            self.translator.translate_text("test", target_lang="EN-US")
+            self.translator.translate_text("test", target_lang="EN")
             return True
         except:
             return False
