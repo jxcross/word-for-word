@@ -93,8 +93,26 @@ def restore_sentence_state(sentence_idx: int):
 
 
 def reset_current_sentence():
-    """현재 문장 상태 초기화 (저장된 상태가 있으면 복원, 없으면 초기화)"""
-    restore_sentence_state(st.session_state.current_sentence_idx)
+    """현재 문장 상태 완전 초기화 (저장된 상태도 삭제)"""
+    if not st.session_state.sentences:
+        return
+    
+    sentence_idx = st.session_state.current_sentence_idx
+    
+    # 저장된 상태 삭제
+    if sentence_idx in st.session_state.sentence_states:
+        del st.session_state.sentence_states[sentence_idx]
+    
+    # 현재 문장의 어절 가져오기
+    st.session_state.current_words = text_processor.get_current_sentence_words(
+        st.session_state.sentences,
+        sentence_idx
+    )
+    
+    # 완전히 초기화
+    st.session_state.selected_words = []
+    st.session_state.current_translation = ''
+    st.session_state.previous_translation = ''
 
 
 def process_text_input(text: str):
