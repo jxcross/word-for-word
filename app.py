@@ -569,11 +569,11 @@ def main():
                 st.rerun()
         
         with nav_col2:
-            # 마지막 문장인 경우 "저장" 버튼, 그 외에는 "저장 및 다음 문장" 버튼
+            # 마지막 문장인 경우 "저장" 버튼, 그 외에는 "다음 문장" 버튼
             if is_last_sentence:
                 button_text = "💾 저장"
             else:
-                button_text = "💾 저장 및 다음 문장"
+                button_text = "다음 문장 ▶"
             
             if st.button(button_text, use_container_width=True, type="primary"):
                 if is_last_sentence:
