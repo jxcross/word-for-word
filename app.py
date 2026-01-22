@@ -334,302 +334,599 @@ def main():
     """메인 앱"""
     initialize_session_state()
     
-    # 제목
-    st.title("🌐 Word-for-Word Translation")
-    st.markdown("---")
+    # 전역 CSS 스타일 추가
+    st.markdown("""
+    <style>
+    /* 전역 스타일 */
+    :root {
+        --primary-color: #1f77b4;
+        --secondary-color: #ff7f0e;
+        --success-color: #2ca02c;
+        --warning-color: #d62728;
+        --bg-color: #ffffff;
+        --card-bg: #f8f9fa;
+        --border-color: #dee2e6;
+        --text-color: #212529;
+        --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    /* 스크롤 동작 개선 - 화면 점프 방지 */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* 제목 스타일 */
+    h1 {
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        color: var(--primary-color) !important;
+        margin-bottom: 1rem !important;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    h2 {
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color) !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    h3 {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color) !important;
+    }
+    
+    /* 본문 텍스트 */
+    .stMarkdown p, .stText {
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        color: var(--text-color) !important;
+    }
+    
+    /* 카드 스타일 컨테이너 */
+    .card-container {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .card-container:hover {
+        box-shadow: var(--shadow-hover);
+    }
+    
+    /* 버튼 스타일 개선 */
+    .stButton > button {
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        padding: 0.6rem 1.2rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: var(--shadow) !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: var(--shadow-hover) !important;
+    }
+    
+    /* 선택된 버튼 스타일 */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+    }
+    
+    /* 번역 결과 박스 */
+    .translation-box {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        min-height: 120px;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        box-shadow: var(--shadow);
+    }
+    
+    /* 선택된 텍스트 박스 */
+    .selected-text-box {
+        background-color: #e3f2fd;
+        border: 2px solid #2196f3;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 1.05rem;
+        font-weight: 500;
+    }
+    
+    /* 어절 버튼 그리드 */
+    .word-button-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
+        margin: 1rem 0;
+    }
+    
+    /* 사이드바 스타일 */
+    .css-1d391kg {
+        background-color: #f8f9fa;
+    }
+    
+    /* 탭 스타일 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        font-size: 1.1rem !important;
+        font-weight: 500 !important;
+        padding: 0.75rem 1.5rem !important;
+        border-radius: 8px 8px 0 0 !important;
+    }
+    
+    /* 진행 상황 표시 */
+    .progress-container {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* 정보 메시지 스타일 */
+    .stInfo {
+        background-color: #e3f2fd !important;
+        border-left: 4px solid #2196f3 !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }
+    
+    /* 성공 메시지 스타일 */
+    .stSuccess {
+        background-color: #e8f5e9 !important;
+        border-left: 4px solid #4caf50 !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }
+    
+    /* 경고 메시지 스타일 */
+    .stWarning {
+        background-color: #fff3e0 !important;
+        border-left: 4px solid #ff9800 !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }
+    
+    /* 에러 메시지 스타일 */
+    .stError {
+        background-color: #ffebee !important;
+        border-left: 4px solid #f44336 !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }
+    
+    /* 번역 완료 영역 */
+    .translation-history-box {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border: 2px solid var(--success-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        min-height: 400px;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        line-height: 1.8;
+        box-shadow: var(--shadow);
+    }
+    
+    /* 네비게이션 버튼 컨테이너 */
+    .nav-container {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+    
+    /* 캡션 스타일 */
+    .stCaption {
+        font-size: 0.95rem !important;
+        color: #6c757d !important;
+        font-weight: 500 !important;
+    }
+    
+    /* 텍스트 영역 스타일 */
+    .stTextArea > div > div > textarea {
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        border-radius: 8px !important;
+        border: 2px solid var(--border-color) !important;
+    }
+    
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px rgba(31, 119, 180, 0.1) !important;
+    }
+    
+    /* 구분선 스타일 */
+    hr {
+        margin: 2rem 0 !important;
+        border: none !important;
+        border-top: 2px solid var(--border-color) !important;
+    }
+    
+    /* 스크롤바 스타일 (선택사항) */
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # 메인 컨테이너로 감싸서 화면 점프 방지
+    main_container = st.container()
+    
+    with main_container:
+        # 제목
+        st.markdown("<h1>🌐 Word-for-Word Translation</h1>", unsafe_allow_html=True)
+        #st.markdown("---")
     
     # 사이드바: 설정
     with st.sidebar:
-        st.header("⚙️ 설정")
-        
-        # 언어 선택
-        translation_direction = st.selectbox(
-            "번역 방향",
-            ["한국어 → 영어", "영어 → 한국어"],
-            index=0 if st.session_state.source_lang == 'ko' else 1
-        )
-        
-        if translation_direction == "한국어 → 영어":
-            st.session_state.source_lang = 'ko'
-            st.session_state.target_lang = 'en'
-        else:
-            st.session_state.source_lang = 'en'
-            st.session_state.target_lang = 'ko'
+        st.markdown("<h3>⚙️ 설정</h3>", unsafe_allow_html=True)
         
         # DeepL API 키 입력
-        st.subheader("DeepL API 키")
-        api_key_input = st.text_input(
-            "API 키",
-            value=st.session_state.deepl_api_key,
-            type="password",
-            help="DeepL API 키를 입력하세요. .env 파일에서도 로드됩니다."
-        )
-        
-        if api_key_input and api_key_input != st.session_state.deepl_api_key:
-            if initialize_translator(api_key_input):
-                st.success("API 키가 설정되었습니다.")
-        
-        if st.session_state.translator:
-            st.success("✅ 번역기 준비됨")
-        else:
-            st.warning("⚠️ API 키를 설정하세요")
+        with st.container():
+            st.markdown("**🔑 DeepL API 키**", unsafe_allow_html=True)
+            api_key_input = st.text_input(
+                "API 키",
+                value=st.session_state.deepl_api_key,
+                type="password",
+                help="DeepL API 키를 입력하세요. .env 파일에서도 로드됩니다.",
+                label_visibility="visible"
+            )
+            
+            if api_key_input and api_key_input != st.session_state.deepl_api_key:
+                if initialize_translator(api_key_input):
+                    st.success("✅ API 키가 설정되었습니다.")
+            
+            if st.session_state.translator:
+                st.success("✅ 번역기 준비됨")
+            else:
+                st.warning("⚠️ API 키를 설정하세요")
         
         st.markdown("---")
         
         # 진행 상황
         if st.session_state.sentences:
-            st.subheader("📊 진행 상황")
-            total = len(st.session_state.sentences)
-            current = st.session_state.current_sentence_idx + 1
-            st.progress(current / total if total > 0 else 0)
-            st.caption(f"{current} / {total} 문장")
-            st.caption(f"완료: {len(st.session_state.translation_history)} 문장")
+            with st.container():
+                st.markdown("**📊 진행 상황**", unsafe_allow_html=True)
+                total = len(st.session_state.sentences)
+                current = st.session_state.current_sentence_idx + 1
+                progress_value = current / total if total > 0 else 0
+                st.progress(progress_value)
+                st.markdown(f"<div class='progress-container'><strong>현재:</strong> {current} / {total} 문장<br><strong>완료:</strong> {len(st.session_state.translation_history)} 문장</div>", unsafe_allow_html=True)
+        
+            st.markdown("---")
+
+        # 언어 선택
+        with st.container():
+            st.markdown("**🌍 번역 방향**")
+            translation_direction = st.selectbox(
+                "번역 방향을 선택하세요",
+                ["한국어 🇰🇷 → 영어 🇬🇧", "영어 🇬🇧 → 한국어 🇰🇷"],
+                index=0 if st.session_state.source_lang == 'ko' else 1,
+                label_visibility="collapsed"
+            )
+            
+            if translation_direction == "한국어 🇰🇷 → 영어 🇬🇧":
+                st.session_state.source_lang = 'ko'
+                st.session_state.target_lang = 'en'
+            else:
+                st.session_state.source_lang = 'en'
+                st.session_state.target_lang = 'ko'
         
         st.markdown("---")
         
         # 텍스트 입력
-        st.header("📝 텍스트 입력")
-        
-        # 파일 업로드
-        uploaded_file = st.file_uploader(
-            "텍스트 파일 업로드",
-            type=['txt'],
-            help="한국어 또는 영어 텍스트 파일을 업로드하세요."
-        )
-        
-        if uploaded_file is not None:
-            text = uploaded_file.read().decode('utf-8')
-            if text != st.session_state.full_text:
-                process_text_input(text)
-        
-        # 텍스트 붙여넣기
-        text_input = st.text_area(
-            "또는 텍스트를 붙여넣으세요",
-            height=100,
-            help="텍스트를 직접 입력하거나 붙여넣으세요."
-        )
-        
-        if st.button("텍스트 처리", type="primary", use_container_width=True):
-            if text_input:
-                process_text_input(text_input)
-            else:
-                st.warning("텍스트를 입력하세요.")
+        with st.container():
+            st.markdown("**📝 텍스트 입력**", unsafe_allow_html=True)
+            
+            # 파일 업로드
+            uploaded_file = st.file_uploader(
+                "📄 텍스트 파일 업로드",
+                type=['txt'],
+                help="한국어 또는 영어 텍스트 파일을 업로드하세요."
+            )
+            
+            if uploaded_file is not None:
+                text = uploaded_file.read().decode('utf-8')
+                if text != st.session_state.full_text:
+                    process_text_input(text)
+            
+            # 텍스트 붙여넣기
+            text_input = st.text_area(
+                "✍️ 또는 텍스트를 붙여넣으세요",
+                height=120,
+                help="텍스트를 직접 입력하거나 붙여넣으세요.",
+                placeholder="여기에 텍스트를 입력하거나 붙여넣으세요..."
+            )
+            
+            if st.button("🚀 텍스트 처리", type="primary", use_container_width=True):
+                if text_input:
+                    process_text_input(text_input)
+                else:
+                    st.warning("⚠️ 텍스트를 입력하세요.")
     
     # 메인 영역
-    
-    # 번역 영역
-    if st.session_state.sentences:
-        st.markdown("---")
-        st.header("🔄 번역")
-        
-        # 현재 문장 정보
-        current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
-        st.caption(f"문장 {st.session_state.current_sentence_idx + 1} / {len(st.session_state.sentences)}")
-        
-        # 오른쪽 메인 영역: 번역과 번역 완료 탭
-        tab1, tab2 = st.tabs(["🔄 번역", "✅ 번역 완료"])
-        
-        with tab1:
-            # 번역 탭 안에 원문과 번역을 나란히 표시
-            left_col, right_col = st.columns([1, 1])
+    with main_container:
+        # 번역 영역
+        if st.session_state.sentences:
+            st.markdown("---")
+            st.markdown("<h2>🔄 번역 작업</h2>", unsafe_allow_html=True)
             
-            with left_col:
-                st.subheader("📖 원문")
-                
-                # 선택된 어절들 표시
-                if st.session_state.selected_words:
-                    # 선택된 단어들을 순서대로 정렬
-                    sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
-                    selected_text = ' '.join([w[1] for w in sorted_words])
-                    st.text_area(
-                        "선택된 텍스트",
-                        value=selected_text,
-                        height=100,
-                        disabled=True,
-                        key=f"selected_text_display_{st.session_state.current_sentence_idx}_{len(st.session_state.selected_words)}"
-                    )
-                
-                # 어절 버튼들 (토글)
-                st.markdown("**어절을 클릭하여 선택/해제하세요:**")
-                
-                if st.session_state.current_words:
-                    # 선택된 단어 인덱스 리스트
-                    selected_indices = [w[0] for w in st.session_state.selected_words]
-                    
-                    # 버튼을 그리드로 배치
-                    cols_per_row = 3
-                    
-                    # 모든 어절을 버튼으로 표시 (선택된 것은 강조)
-                    # 버튼 렌더링
-                    for row_start in range(0, len(st.session_state.current_words), cols_per_row):
-                        cols = st.columns(cols_per_row)
-                        for col_idx, col in enumerate(cols):
-                            word_idx = row_start + col_idx
-                            if word_idx < len(st.session_state.current_words):
-                                word = st.session_state.current_words[word_idx]
-                                button_key = f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}"
-                                
-                                # 선택된 단어는 primary 타입으로 표시
-                                is_selected = word_idx in selected_indices
-                                button_clicked = col.button(
-                                    word,
-                                    key=button_key,
-                                    use_container_width=True,
-                                    type="primary" if is_selected else "secondary"
-                                )
-                                if button_clicked:
-                                    handle_word_click(word_idx)
-                                    st.rerun()
-                else:
-                    st.info("어절이 없습니다.")
-            
-            with right_col:
-                st.subheader("🌍 번역")
-                
-                # 번역 결과 표시
-                # handle_word_click에서 이미 번역을 수행했으므로 여기서는 표시만
-                if st.session_state.current_translation:
-                    # 달라진 단어를 빨간색으로 표시
-                    highlighted = highlight_different_words(
-                        st.session_state.current_translation,
-                        st.session_state.previous_translation
-                    )
-                    st.markdown("**번역 결과:**")
-                    st.markdown(f'<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; min-height: 100px; background-color: #f9f9f9;">{highlighted}</div>', unsafe_allow_html=True)
-                elif st.session_state.selected_words:
-                    st.info("어절을 클릭하면 번역이 표시됩니다.")
-                else:
-                    st.info("어절을 클릭하면 번역이 표시됩니다.")
-                
-                # 번역 버튼 (수동 번역)
-                if st.session_state.selected_words and st.session_state.translator:
-                    # 선택된 단어들을 순서대로 정렬
-                    sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
-                    accumulated_text = ' '.join([w[1] for w in sorted_words])
-                    if st.button("🔄 번역 새로고침", use_container_width=True):
-                        try:
-                            # 이전 번역 결과 저장
-                            st.session_state.previous_translation = st.session_state.current_translation
-                            
-                            translated = st.session_state.translator.translate(
-                                accumulated_text,
-                                st.session_state.source_lang,
-                                st.session_state.target_lang
-                            )
-                            st.session_state.current_translation = translated
-                            st.rerun()
-                        except translation.TranslationError as e:
-                            st.error(str(e))
-        
-        with tab2:
-            st.subheader("✅ 번역 완료")
-            
-            # 번역된 내용 표시
-            if st.session_state.translation_history:
-                st.write(f"**번역 완료된 문장 수: {len(st.session_state.translation_history)}**")
-                st.markdown("---")
-                
-                # 번역된 내용을 표시 (인덱스 순서대로 정렬)
-                translation_text = ""
-                # translation_history가 딕셔너리인지 확인
-                if isinstance(st.session_state.translation_history, dict):
-                    # 문장 인덱스 순서대로 정렬
-                    sorted_items = sorted(st.session_state.translation_history.items())
-                    
-                    # 모든 항목 표시
-                    for display_idx, (sentence_idx, value) in enumerate(sorted_items, 1):
-                        # value가 튜플인지 확인
-                        if isinstance(value, tuple) and len(value) == 2:
-                            original, translated = value
-                            translation_text += f"{display_idx}. {original} | {translated}\n"
-                        else:
-                            # 예상치 못한 형식
-                            translation_text += f"{display_idx}. [오류: 잘못된 데이터 형식] (인덱스: {sentence_idx}, 값: {value})\n"
-                    
-                    # 디버깅: 생성된 텍스트 확인 (주석 처리)
-                    # st.write(f"🔍 생성된 번역 텍스트 길이: {len(translation_text)}, 줄 수: {len(translation_text.split(chr(10)))}")
-                    # st.write(f"🔍 생성된 번역 텍스트 내용 (repr): {repr(translation_text)}")
-                    # st.write(f"🔍 생성된 번역 텍스트 내용 (실제): {translation_text}")
-                else:
-                    # 리스트 형식인 경우 (호환성)
-                    for idx, item in enumerate(st.session_state.translation_history, 1):
-                        if isinstance(item, tuple) and len(item) == 2:
-                            original, translated = item
-                            translation_text += f"{idx}. {original} | {translated}\n"
-                        else:
-                            translation_text += f"{idx}. [오류: 잘못된 데이터 형식]\n"
-                
-                # st.text_area는 여러 줄 표시에 문제가 있어 st.markdown으로 변경
-                # HTML 이스케이프 처리
-                import html
-                translation_text_escaped = html.escape(translation_text)
-                # 줄바꿈을 HTML <br>로 변환하여 표시
-                translation_text_html = translation_text_escaped.replace('\n', '<br>')
+            # 현재 문장 정보 카드
+            current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
+            sentence_info = st.container()
+            with sentence_info:
                 st.markdown(
-                    f'<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; min-height: 400px; background-color: #f9f9f9; white-space: pre-wrap; font-family: monospace;">{translation_text_html}</div>',
+                    f"<div class='card-container' style='text-align: center; padding: 1rem;'>"
+                    f"<strong style='font-size: 1.2rem;'>📄 문장 {st.session_state.current_sentence_idx + 1} / {len(st.session_state.sentences)}</strong>"
+                    f"</div>",
                     unsafe_allow_html=True
                 )
-                
-                # 전체 번역 저장 버튼
-                if st.button("💾 전체 번역 저장", use_container_width=True, type="primary"):
-                    try:
-                        # 딕셔너리를 리스트로 변환 (storage 함수 호환성)
-                        translation_list = list(st.session_state.translation_history.values())
-                        filepath = storage.save_translation(translation_list)
-                        st.success(f"번역이 저장되었습니다: {filepath}")
-                    except Exception as e:
-                        st.error(f"저장 중 오류: {str(e)}")
-            else:
-                st.info("아직 번역 완료된 문장이 없습니다. 번역 탭에서 작업을 진행하세요.")
-        
-        # 네비게이션 버튼
-        st.markdown("---")
-        nav_col1, nav_col2, nav_col3, nav_col4 = st.columns([1, 1, 1, 1])
-        
-        # 현재 문장 인덱스와 전체 문장 수
-        current_idx = st.session_state.current_sentence_idx
-        total_sentences = len(st.session_state.sentences)
-        is_first_sentence = current_idx == 0
-        is_last_sentence = current_idx == total_sentences - 1
-        
-        with nav_col1:
-            if st.button("◀ 이전 문장", use_container_width=True, disabled=is_first_sentence):
-                move_to_previous_sentence()
-                st.rerun()
-        
-        with nav_col2:
-            # 마지막 문장인 경우 "저장" 버튼, 그 외에는 "다음 문장" 버튼
-            if is_last_sentence:
-                button_text = "💾 저장"
-            else:
-                button_text = "다음 문장 ▶"
             
-            if st.button(button_text, use_container_width=True, type="primary"):
-                if is_last_sentence:
-                    # 마지막 문장: 저장만 수행 (번역 결과가 없어도 저장 가능)
-                    save_current_sentence()
-                else:
-                    # 그 외: 저장 후 다음 문장으로 이동
-                    move_to_next_sentence()
-                st.rerun()
-        with nav_col3:
-            if st.button("🌐 문장 번역", use_container_width=True):
-                if st.session_state.translator:
-                    translate_current_sentence()
-                    st.rerun()
-                else:
-                    st.warning("번역기를 설정하세요.")
+            # 오른쪽 메인 영역: 번역과 번역 완료 탭
+            tab1, tab2 = st.tabs(["🔄 실시간 번역", "✅ 번역 완료 목록"])
+            
+            with tab1:
+                # 번역 탭 안에 원문과 번역을 나란히 표시
+                left_col, right_col = st.columns([1, 1], gap="large")
+                
+                with left_col:
+                    translation_left = st.container()
+                    with translation_left:
+                        st.markdown("<h3>📖 원문</h3>", unsafe_allow_html=True)
+                        
+                        # 선택된 어절들 표시
+                        if st.session_state.selected_words:
+                            # 선택된 단어들을 순서대로 정렬
+                            sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+                            selected_text = ' '.join([w[1] for w in sorted_words])
+                            st.markdown(
+                                f'<div class="selected-text-box">'
+                                f'<strong>✅ 선택된 텍스트:</strong><br>{selected_text}'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        
+                        # 어절 버튼들 (토글)
+                        st.markdown("<p style='font-size: 1.05rem; margin-top: 1rem;'><strong>👆 어절을 클릭하여 선택/해제하세요:</strong></p>", unsafe_allow_html=True)
+                        
+                        if st.session_state.current_words:
+                            # 선택된 단어 인덱스 리스트
+                            selected_indices = [w[0] for w in st.session_state.selected_words]
+                            
+                            # 버튼을 그리드로 배치
+                            cols_per_row = 4
+                            
+                            # 모든 어절을 버튼으로 표시 (선택된 것은 강조)
+                            word_buttons_container = st.container()
+                            with word_buttons_container:
+                                for row_start in range(0, len(st.session_state.current_words), cols_per_row):
+                                    cols = st.columns(cols_per_row, gap="small")
+                                    for col_idx, col in enumerate(cols):
+                                        word_idx = row_start + col_idx
+                                        if word_idx < len(st.session_state.current_words):
+                                            word = st.session_state.current_words[word_idx]
+                                            button_key = f"word_btn_{st.session_state.current_sentence_idx}_{word_idx}"
+                                            
+                                            # 선택된 단어는 primary 타입으로 표시
+                                            is_selected = word_idx in selected_indices
+                                            button_label = f"✓ {word}" if is_selected else word
+                                            button_clicked = col.button(
+                                                button_label,
+                                                key=button_key,
+                                                use_container_width=True,
+                                                type="primary" if is_selected else "secondary"
+                                            )
+                                            if button_clicked:
+                                                handle_word_click(word_idx)
+                                                # 상태 업데이트 후 rerun 필요 (UI 반영)
+                                                st.rerun()
+                        else:
+                            st.info("ℹ️ 어절이 없습니다.")
+                
+                with right_col:
+                    translation_right = st.container()
+                    with translation_right:
+                        st.markdown("<h3>🌍 번역 결과</h3>", unsafe_allow_html=True)
+                        
+                        # 번역 결과 표시
+                        if st.session_state.current_translation:
+                            # 달라진 단어를 빨간색으로 표시
+                            highlighted = highlight_different_words(
+                                st.session_state.current_translation,
+                                st.session_state.previous_translation
+                            )
+                            st.markdown(
+                                f'<div class="translation-box">'
+                                f'<strong style="font-size: 1.1rem; color: #1f77b4;">✨ 번역 결과:</strong><br><br>'
+                                f'{highlighted}'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        elif st.session_state.selected_words:
+                            st.info("💡 어절을 클릭하면 번역이 표시됩니다.")
+                        else:
+                            st.info("👆 왼쪽에서 어절을 선택하면 번역이 표시됩니다.")
+                        
+                        # 번역 버튼 (수동 번역)
+                        if st.session_state.selected_words and st.session_state.translator:
+                            # 선택된 단어들을 순서대로 정렬
+                            sorted_words = sorted(st.session_state.selected_words, key=lambda x: x[0])
+                            accumulated_text = ' '.join([w[1] for w in sorted_words])
+                            refresh_col1, refresh_col2 = st.columns([2, 1])
+                            with refresh_col1:
+                                if st.button("🔄 번역 새로고침", use_container_width=True, type="primary"):
+                                    try:
+                                        # 이전 번역 결과 저장
+                                        st.session_state.previous_translation = st.session_state.current_translation
+                                        
+                                        translated = st.session_state.translator.translate(
+                                            accumulated_text,
+                                            st.session_state.source_lang,
+                                            st.session_state.target_lang
+                                        )
+                                        st.session_state.current_translation = translated
+                                        st.rerun()
+                                    except translation.TranslationError as e:
+                                        st.error(str(e))
+            
+            with tab2:
+                translation_history_container = st.container()
+                with translation_history_container:
+                    st.markdown("<h3>✅ 번역 완료 목록</h3>", unsafe_allow_html=True)
                     
-        with nav_col4:
-            if st.button("🔄 현재 문장 리셋", use_container_width=True):
-                reset_current_sentence()
-                st.rerun()
+                    # 번역된 내용 표시
+                    if st.session_state.translation_history:
+                        st.markdown(
+                            f"<div class='card-container' style='text-align: center;'>"
+                            f"<strong style='font-size: 1.3rem;'>📊 번역 완료된 문장 수: {len(st.session_state.translation_history)}</strong>"
+                            f"</div>",
+                            unsafe_allow_html=True
+                        )
+                        st.markdown("---")
+                        
+                        # 번역된 내용을 표시 (인덱스 순서대로 정렬)
+                        translation_text = ""
+                        # translation_history가 딕셔너리인지 확인
+                        if isinstance(st.session_state.translation_history, dict):
+                            # 문장 인덱스 순서대로 정렬
+                            sorted_items = sorted(st.session_state.translation_history.items())
+                            
+                            # 모든 항목 표시
+                            for display_idx, (sentence_idx, value) in enumerate(sorted_items, 1):
+                                # value가 튜플인지 확인
+                                if isinstance(value, tuple) and len(value) == 2:
+                                    original, translated = value
+                                    translation_text += f"{display_idx}. {original} | {translated}\n"
+                                else:
+                                    # 예상치 못한 형식
+                                    translation_text += f"{display_idx}. [오류: 잘못된 데이터 형식] (인덱스: {sentence_idx}, 값: {value})\n"
+                        else:
+                            # 리스트 형식인 경우 (호환성)
+                            for idx, item in enumerate(st.session_state.translation_history, 1):
+                                if isinstance(item, tuple) and len(item) == 2:
+                                    original, translated = item
+                                    translation_text += f"{idx}. {original} | {translated}\n"
+                                else:
+                                    translation_text += f"{idx}. [오류: 잘못된 데이터 형식]\n"
+                        
+                        # HTML 이스케이프 처리
+                        import html
+                        translation_text_escaped = html.escape(translation_text)
+                        # 줄바꿈을 HTML <br>로 변환하여 표시
+                        translation_text_html = translation_text_escaped.replace('\n', '<br>')
+                        st.markdown(
+                            f'<div class="translation-history-box">{translation_text_html}</div>',
+                            unsafe_allow_html=True
+                        )
+                        
+                        # 전체 번역 저장 버튼
+                        save_col1, save_col2 = st.columns([1, 1])
+                        with save_col1:
+                            if st.button("💾 전체 번역 저장", use_container_width=True, type="primary"):
+                                try:
+                                    # 딕셔너리를 리스트로 변환 (storage 함수 호환성)
+                                    translation_list = list(st.session_state.translation_history.values())
+                                    filepath = storage.save_translation(translation_list)
+                                    st.success(f"✅ 번역이 저장되었습니다: {filepath}")
+                                except Exception as e:
+                                    st.error(f"❌ 저장 중 오류: {str(e)}")
+                    else:
+                        st.info("ℹ️ 아직 번역 완료된 문장이 없습니다. 번역 탭에서 작업을 진행하세요.")
         
-
-    
-    else:
-        # 안내 메시지
-        st.info("👆 위에서 텍스트 파일을 업로드하거나 텍스트를 입력하세요.")
+            # 네비게이션 버튼
+            nav_container = st.container()
+            with nav_container:
+                st.markdown("<div class='nav-container'></div>", unsafe_allow_html=True)
+                st.markdown("---")
+                
+                # 현재 문장 인덱스와 전체 문장 수
+                current_idx = st.session_state.current_sentence_idx
+                total_sentences = len(st.session_state.sentences)
+                is_first_sentence = current_idx == 0
+                is_last_sentence = current_idx == total_sentences - 1
+                
+                nav_col1, nav_col2, nav_col3, nav_col4 = st.columns([1, 1, 1, 1], gap="medium")
+                
+                with nav_col1:
+                    if st.button("◀️ 이전 문장", use_container_width=True, disabled=is_first_sentence, key="nav_prev"):
+                        move_to_previous_sentence()
+                        st.rerun()
+                
+                with nav_col2:
+                    # 마지막 문장인 경우 "저장" 버튼, 그 외에는 "다음 문장" 버튼
+                    if is_last_sentence:
+                        button_text = "💾 저장"
+                    else:
+                        button_text = "다음 문장 ▶️"
+                    
+                    if st.button(button_text, use_container_width=True, type="primary", key="nav_next"):
+                        if is_last_sentence:
+                            # 마지막 문장: 저장만 수행 (번역 결과가 없어도 저장 가능)
+                            save_current_sentence()
+                        else:
+                            # 그 외: 저장 후 다음 문장으로 이동
+                            move_to_next_sentence()
+                        st.rerun()
+                
+                with nav_col3:
+                    if st.button("🌐 문장 번역", use_container_width=True, key="nav_translate"):
+                        if st.session_state.translator:
+                            translate_current_sentence()
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ 번역기를 설정하세요.")
+                        
+                with nav_col4:
+                    if st.button("🔄 현재 문장 리셋", use_container_width=True, key="nav_reset"):
+                        reset_current_sentence()
+                        st.rerun()
+        
+        else:
+            # 안내 메시지
+            welcome_container = st.container()
+            with welcome_container:
+                st.markdown(
+                    "<div class='card-container' style='text-align: center; padding: 3rem;'>"
+                    "<h2 style='color: #667eea;'>👋 환영합니다!</h2>"
+                    "<p style='font-size: 1.2rem; margin-top: 1rem;'>"
+                    "👆 왼쪽 사이드바에서 텍스트 파일을 업로드하거나<br>"
+                    "텍스트를 직접 입력하여 번역을 시작하세요."
+                    "</p>"
+                    "</div>",
+                    unsafe_allow_html=True
+                )
 
 
 if __name__ == "__main__":
