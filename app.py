@@ -232,22 +232,28 @@ def handle_word_click(word_idx: int):
 
 
 def save_current_sentence():
-    """현재 문장 번역 저장"""
+    """현재 문장 번역 저장 (번역 결과가 없어도 원문만으로 저장 가능)"""
     if not st.session_state.sentences:
         return
     
     current_sentence = st.session_state.sentences[st.session_state.current_sentence_idx]
-    translation_text = st.session_state.current_translation
+    translation_text = st.session_state.current_translation or ''  # 번역 결과가 없으면 빈 문자열
     sentence_idx = st.session_state.current_sentence_idx
     
-    if current_sentence and translation_text:
+    if current_sentence:
         # 문장 인덱스를 키로 사용하여 저장 (중복 방지 및 업데이트)
         if sentence_idx in st.session_state.translation_history:
             st.session_state.translation_history[sentence_idx] = (current_sentence, translation_text)
-            st.success("번역이 업데이트되었습니다.")
+            if translation_text:
+                st.success("번역이 업데이트되었습니다.")
+            else:
+                st.success("원문이 저장되었습니다.")
         else:
             st.session_state.translation_history[sentence_idx] = (current_sentence, translation_text)
-            st.success("번역이 저장되었습니다.")
+            if translation_text:
+                st.success("번역이 저장되었습니다.")
+            else:
+                st.success("원문이 저장되었습니다.")
 
 
 def move_to_next_sentence():
@@ -258,9 +264,8 @@ def move_to_next_sentence():
     # 현재 문장의 상태 저장 (선택된 단어, 번역 결과 등)
     save_current_sentence_state()
     
-    # 현재 문장 저장 (번역 결과가 있으면 저장)
-    if st.session_state.current_translation:
-        save_current_sentence()
+    # 현재 문장 저장 (번역 결과가 없어도 원문만으로 저장 가능)
+    save_current_sentence()
     
     # 다음 문장으로 이동
     if st.session_state.current_sentence_idx < len(st.session_state.sentences) - 1:
@@ -276,9 +281,8 @@ def move_to_previous_sentence():
         # 현재 문장의 상태 저장 (선택된 단어, 번역 결과 등)
         save_current_sentence_state()
         
-        # 현재 문장 저장 (번역 결과가 있으면 저장)
-        if st.session_state.current_translation:
-            save_current_sentence()
+        # 현재 문장 저장 (번역 결과가 없어도 원문만으로 저장 가능)
+        save_current_sentence()
         
         st.session_state.current_sentence_idx -= 1
         restore_sentence_state(st.session_state.current_sentence_idx)
@@ -573,9 +577,8 @@ def main():
             
             if st.button(button_text, use_container_width=True, type="primary"):
                 if is_last_sentence:
-                    # 마지막 문장: 저장만 수행
-                    if st.session_state.current_translation:
-                        save_current_sentence()
+                    # 마지막 문장: 저장만 수행 (번역 결과가 없어도 저장 가능)
+                    save_current_sentence()
                 else:
                     # 그 외: 저장 후 다음 문장으로 이동
                     move_to_next_sentence()
