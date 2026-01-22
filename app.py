@@ -612,19 +612,20 @@ def main():
                     # 그 외: 저장 후 다음 문장으로 이동
                     move_to_next_sentence()
                 st.rerun()
-        
         with nav_col3:
-            if st.button("🔄 현재 문장 리셋", use_container_width=True):
-                reset_current_sentence()
-                st.rerun()
-        
-        with nav_col4:
             if st.button("🌐 문장 번역", use_container_width=True):
                 if st.session_state.translator:
                     translate_current_sentence()
                     st.rerun()
                 else:
                     st.warning("번역기를 설정하세요.")
+                    
+        with nav_col4:
+            if st.button("🔄 현재 문장 리셋", use_container_width=True):
+                reset_current_sentence()
+                st.rerun()
+        
+
     
     else:
         # 안내 메시지
