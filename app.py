@@ -6,6 +6,7 @@ Streamlit 기반 Word-for-Word 번역 앱
 
 import streamlit as st
 from typing import List, Tuple, Optional
+from datetime import datetime
 import text_processor
 import translation
 import storage
@@ -853,7 +854,7 @@ def main():
                             unsafe_allow_html=True
                         )
                         
-                        # 전체 번역 저장 버튼
+                        # 전체 번역 저장 버튼 및 다운로드 버튼
                         save_col1, save_col2 = st.columns([1, 1])
                         with save_col1:
                             if st.button("💾 전체 번역 저장", use_container_width=True, type="primary"):
@@ -864,6 +865,34 @@ def main():
                                     st.success(f"✅ 번역이 저장되었습니다: {filepath}")
                                 except Exception as e:
                                     st.error(f"❌ 저장 중 오류: {str(e)}")
+                        
+                        with save_col2:
+                            # 다운로드용 텍스트 생성
+                            if st.session_state.translation_history:
+                                # 딕셔너리를 정렬
+                                sorted_translations = sorted(
+                                    st.session_state.translation_history.items()
+                                )
+                                
+                                # 다운로드용 텍스트 생성
+                                download_text = ""
+                                for sentence_idx, (original, translated) in sorted_translations:
+                                    download_text += f"{original} | {translated}\n"
+                                
+                                # 파일명 생성
+                                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                                filename = f"translation_{timestamp}.txt"
+                                
+                                st.download_button(
+                                    label="📥 다운로드",
+                                    data=download_text,
+                                    file_name=filename,
+                                    mime="text/plain",
+                                    use_container_width=True,
+                                    type="primary"
+                                )
+                            else:
+                                st.button("📥 다운로드", use_container_width=True, disabled=True, type="primary")
                     else:
                         st.info("ℹ️ 아직 번역 완료된 문장이 없습니다. 번역 탭에서 작업을 진행하세요.")
         
