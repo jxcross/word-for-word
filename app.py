@@ -231,6 +231,35 @@ def handle_word_click(word_idx: int):
             st.session_state.current_translation = ''
 
 
+def translate_current_sentence():
+    """현재 문장의 모든 어절을 선택하고 번역 수행"""
+    if not st.session_state.sentences or not st.session_state.current_words:
+        return
+    
+    # 모든 어절을 선택 상태로 만들기
+    all_words = [(idx, word) for idx, word in enumerate(st.session_state.current_words)]
+    st.session_state.selected_words = all_words
+    
+    # 전체 문장 텍스트 생성
+    full_text = ' '.join(st.session_state.current_words)
+    
+    # 번역 수행
+    if st.session_state.translator and full_text:
+        try:
+            # 이전 번역 결과 저장
+            st.session_state.previous_translation = st.session_state.current_translation
+            
+            translated = st.session_state.translator.translate(
+                full_text,
+                st.session_state.source_lang,
+                st.session_state.target_lang
+            )
+            st.session_state.current_translation = translated
+        except translation.TranslationError as e:
+            st.error(str(e))
+            st.session_state.current_translation = ''
+
+
 def save_current_sentence():
     """현재 문장 번역 저장 (번역 결과가 없어도 원문만으로 저장 가능)"""
     if not st.session_state.sentences:
@@ -555,7 +584,7 @@ def main():
         
         # 네비게이션 버튼
         st.markdown("---")
-        nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 1])
+        nav_col1, nav_col2, nav_col3, nav_col4 = st.columns([1, 1, 1, 1])
         
         # 현재 문장 인덱스와 전체 문장 수
         current_idx = st.session_state.current_sentence_idx
@@ -588,6 +617,14 @@ def main():
             if st.button("🔄 현재 문장 리셋", use_container_width=True):
                 reset_current_sentence()
                 st.rerun()
+        
+        with nav_col4:
+            if st.button("🌐 문장 번역", use_container_width=True):
+                if st.session_state.translator:
+                    translate_current_sentence()
+                    st.rerun()
+                else:
+                    st.warning("번역기를 설정하세요.")
     
     else:
         # 안내 메시지
