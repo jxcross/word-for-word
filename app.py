@@ -497,14 +497,32 @@ def main():
         st.markdown("---")
         nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 1])
         
+        # 현재 문장 인덱스와 전체 문장 수
+        current_idx = st.session_state.current_sentence_idx
+        total_sentences = len(st.session_state.sentences)
+        is_first_sentence = current_idx == 0
+        is_last_sentence = current_idx == total_sentences - 1
+        
         with nav_col1:
-            if st.button("◀ 이전 문장", use_container_width=True):
+            if st.button("◀ 이전 문장", use_container_width=True, disabled=is_first_sentence):
                 move_to_previous_sentence()
                 st.rerun()
         
         with nav_col2:
-            if st.button("다음 문장 ▶", use_container_width=True, type="primary"):
-                move_to_next_sentence()
+            # 마지막 문장인 경우 "저장" 버튼, 그 외에는 "저장 및 다음 문장" 버튼
+            if is_last_sentence:
+                button_text = "💾 저장"
+            else:
+                button_text = "💾 저장 및 다음 문장"
+            
+            if st.button(button_text, use_container_width=True, type="primary"):
+                if is_last_sentence:
+                    # 마지막 문장: 저장만 수행
+                    if st.session_state.current_translation:
+                        save_current_sentence()
+                else:
+                    # 그 외: 저장 후 다음 문장으로 이동
+                    move_to_next_sentence()
                 st.rerun()
         
         with nav_col3:
