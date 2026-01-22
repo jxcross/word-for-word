@@ -520,7 +520,9 @@ def main():
         border: 2px solid var(--success-color);
         border-radius: 12px;
         padding: 1.5rem;
-        min-height: 400px;
+        min-height: 300px;
+        max-height: 500px;
+        overflow-y: auto;
         font-family: 'Courier New', monospace;
         font-size: 1rem;
         line-height: 1.8;
@@ -592,7 +594,19 @@ def main():
     
     # 사이드바: 설정
     with st.sidebar:
-        st.markdown("<h2>🌐 Word-for-Word Translation</h2>", unsafe_allow_html=True)
+
+        st.markdown("""
+<div style="text-align: center;">
+    <div style="font-size: 28px; font-weight: 600; line-height: 1.1;">
+        🌐 Word-for-Word Translation
+    </div>
+    <div style="font-size: 18px; line-height: 1.1;">
+        직 독 직 해
+    </div>
+</div>
+""", unsafe_allow_html=True)
+        st.markdown("---")
+
         st.markdown("<h3>⚙️ 설정</h3>", unsafe_allow_html=True)
         
         # DeepL API 키 입력
